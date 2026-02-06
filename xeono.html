@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Test amplio de sesgos (Argentina): prejuicios y percepciones</title>
+  <style>
+    :root { --bg:#0b0f17; --card:#121a27; --txt:#e7eefc; --muted:#a9b7d0; --accent:#6ea8ff; --line:#24324a; --warn:#ffcf5a; --danger:#ff6b6b; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    p  { margin: 0 0 14px; color: var(--muted); line-height: 1.45; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 14px 0; }
+    .mini { font-size: 12px; color: var(--muted); }
+    .q { padding: 14px 0; border-top: 1px solid var(--line); }
+    .q:first-child { border-top: 0; }
+    .q .t { font-weight: 650; margin-bottom: 10px; }
+    .scale { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .pill { display:flex; gap:8px; align-items:center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 999px; cursor:pointer; user-select:none; }
+    .pill span { color: var(--muted); font-size: 13px; }
+    input[type="radio"] { accent-color: var(--accent); cursor:pointer; }
+    .row { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+    .btn { background: var(--accent); color:#07101f; border:0; padding: 10px 14px; border-radius: 10px; font-weight: 850; cursor:pointer; }
+    .btn2 { background:#2a3850; color:var(--txt); border:1px solid var(--line); padding: 10px 14px; border-radius: 10px; font-weight: 700; cursor:pointer; }
+    .btn:disabled { opacity: .5; cursor:not-allowed; }
+    .bar { height: 10px; background:#0a1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+    .bar > div { height:100%; width:0%; background: var(--accent); }
+    .kpi { font-size: 28px; font-weight: 900; }
+    .tag { display:inline-block; padding: 4px 10px; border:1px solid var(--line); border-radius:999px; margin-right:8px; color: var(--muted); font-size: 13px; }
+    .notice { border:1px solid rgba(255,207,90,.35); background: rgba(255,207,90,.08); padding: 10px 12px; border-radius: 12px; }
+    .danger { border:1px solid rgba(255,107,107,.35); background: rgba(255,107,107,.08); padding: 10px 12px; border-radius: 12px; }
+    .grid { display:grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 820px){ .grid { grid-template-columns: 1fr 1fr; } }
+    .metric { border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: rgba(10,18,32,.35); }
+    .metric .name { font-weight: 800; margin-bottom: 6px; }
+    .metric .desc { color: var(--muted); font-size: 13px; line-height: 1.35; margin-top: 8px; }
+    a { color: var(--accent); text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Test amplio de sesgos (Argentina)</h1>
+    <p>
+      Este test evalúa <b>indicadores</b> de prejuicio y generalización (antisemitismo, islamofobia, xenofobia, racismo/etnocentrismo y hostilidad “anti-Israel”).
+      <b>No</b> es un diagnóstico clínico ni una etiqueta definitiva: es una herramienta de reflexión.
+    </p>
+
+    <div class="card notice">
+      <div style="font-weight:850;">Cómo leer el resultado</div>
+      <div class="mini" style="margin-top:6px;">
+        - Puntajes altos sugieren <b>mayor riesgo</b> de sesgos (conspiración, deshumanización, generalización).<br>
+        - Separé “crítica política a Israel” de “prejuicio hacia judíos” para evitar confusiones.<br>
+        - No se guardan resultados ni se crea ranking (queda en tu pantalla).
+      </div>
+    </div>
+
+    <div class="card" id="test"></div>
+
+    <div class="row">
+      <button class="btn" id="calcBtn" disabled>Calcular resultado</button>
+      <button class="btn2" id="resetBtn">Reset</button>
+      <div class="mini" id="progress"></div>
+    </div>
+
+    <div class="card" id="result" style="display:none;">
+      <div class="row" style="justify-content:space-between; align-items:flex-end;">
+        <div>
+          <div class="mini">Resultado general</div>
+          <div class="kpi" id="overall">—</div>
+          <div class="mini">0 = bajo riesgo de sesgos · 100 = alto riesgo de sesgos (según este test)</div>
+        </div>
+        <div>
+          <span class="tag" id="summaryTag">—</span>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="mini">Perfil por dimensión</div>
+        <div class="grid" id="metrics"></div>
+      </div>
+
+      <div style="margin-top:14px;" id="alerts"></div>
+
+      <div style="margin-top:14px;" class="mini">
+        Sugerencia: si te da alto en alguna dimensión, mirá <b>qué tipo de afirmaciones</b> te subieron (conspiración, “todos son iguales”, culpa colectiva, deshumanización).
+        Eso es lo que más suele deteriorar el debate y la convivencia.
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Escala Likert 1..5
+  // centered = (v-3)/2 => -1..+1
+  // Convertimos a 0..100 por dimensión.
+
+  const DIM_KEYS = [
+    "AntiJew_Conspiracy",     // antisemitismo conspirativo / poder oculto
+    "AntiJew_Generalization", // culpa colectiva / judíos = Israel / esencialismo
+    "AntiIsrael_Hostility",   // hostilidad deslegitimante a Israel (separada)
+    "Islamophobia",           // amenaza cultural / generalización musulmanes
+    "Xenophobia_AR",          // inmigración vecina / “merecen menos” (AR)
+    "Racism_Ethnocentrism",   // jerarquías culturales/biológicas implícitas
+    "Authoritarian_Exclusion" // preferencia por exclusión/represión “por identidad”
+  ];
+
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+  // Preguntas:
+  // - Evito insultos y slurs.
+  // - Algunas son “zona roja” (conspiración, culpa colectiva, deshumanización).
+  // - Algunas miden “anti-Israel” sin ser automáticamente antisemitismo.
+  // - Todas están formuladas para generar debate, pero sin incitar odio.
+  const QUESTIONS = [
+    // Antisemitismo conspirativo (zona roja)
+    { t:"“Hay grupos judíos que influyen en exceso en finanzas globales.”", w:{AntiJew_Conspiracy:1.0} },
+    { t:"“Los medios internacionales suelen estar capturados por intereses judíos.”", w:{AntiJew_Conspiracy:1.0} },
+    { t:"“Se evita criticar a judíos por miedo a consecuencias.”", w:{AntiJew_Conspiracy:0.8} },
+    { t:"“Las organizaciones judías condicionan gobiernos más de lo normal.”", w:{AntiJew_Conspiracy:0.9} },
+
+    // Antisemitismo por generalización / culpa colectiva (zona roja)
+    { t:"“Las acciones del gobierno israelí representan a los judíos en general.”", w:{AntiJew_Generalization:1.0} },
+    { t:"“Los judíos priorizan sus intereses por encima del país donde viven.”", w:{AntiJew_Generalization:1.0} },
+    { t:"“En Argentina, la comunidad judía es un actor político ‘aparte’.”", w:{AntiJew_Generalization:0.8} },
+
+    // Anti-Israel (hostilidad deslegitimante) — separado de antisemitismo
+    { t:"“La existencia misma de Israel es un problema para la paz mundial.”", w:{AntiIsrael_Hostility:1.0} },
+    { t:"“Israel no debería existir como Estado.”", w:{AntiIsrael_Hostility:1.0} },
+    { t:"“Israel debería ser juzgado con estándares más altos que otros países.”", w:{AntiIsrael_Hostility:0.7} },
+    { t:"“El conflicto en Medio Oriente se resolvería si Israel dejara de existir.”", w:{AntiIsrael_Hostility:1.0} },
+
+    // Ítems “puente” para distinguir crítica política vs prejuicio
+    // (Estos bajan puntajes de antisemitismo si hay claridad conceptual)
+    { t:"“Se puede criticar a Israel sin generalizar sobre judíos.”", w:{AntiJew_Generalization:-0.9} },
+    { t:"“Las minorías religiosas no deberían cargar con culpas colectivas por gobiernos lejanos.”", w:{AntiJew_Generalization:-0.7, Islamophobia:-0.4} },
+
+    // Islamofobia
+    { t:"“El islam político es incompatible con valores democráticos.”", w:{Islamophobia:0.5} }, // parcialmente debatible, peso moderado
+    { t:"“Los musulmanes tienden a apoyar más la imposición de normas religiosas.”", w:{Islamophobia:1.0} },
+    { t:"“La inmigración de países mayoritariamente musulmanes aumenta el riesgo de violencia.”", w:{Islamophobia:1.0} },
+    { t:"“La convivencia con comunidades musulmanas fuertes suele generar conflictos culturales inevitables.”", w:{Islamophobia:0.9} },
+    { t:"“Las religiones deberían adaptarse totalmente a la cultura local o perder espacio público.”", w:{Islamophobia:0.5, Racism_Ethnocentrism:0.4} },
+
+    // Xenofobia (Argentina / región)
+    { t:"“Argentina recibe demasiados inmigrantes de países limítrofes.”", w:{Xenophobia_AR:0.9} },
+    { t:"“Quien no es argentino debería tener menos prioridad en salud/educación pública.”", w:{Xenophobia_AR:1.0, Authoritarian_Exclusion:0.4} },
+    { t:"“La inmigración empeora el delito más de lo que aporta.”", w:{Xenophobia_AR:0.9} },
+    { t:"“Hay barrios/zonas donde la presencia de inmigrantes ‘cambia’ negativamente la identidad local.”", w:{Xenophobia_AR:0.9, Racism_Ethnocentrism:0.3} },
+    { t:"“Debería deportarse rápidamente a extranjeros que cometen delitos, incluso menores.”", w:{Xenophobia_AR:0.7, Authoritarian_Exclusion:0.7} },
+
+    // Racismo / etnocentrismo (sin slurs, pero divisivo)
+    { t:"“Algunas culturas son claramente superiores a otras.”", w:{Racism_Ethnocentrism:1.0} },
+    { t:"“La pobreza se explica más por ‘cultura de trabajo’ que por estructura económica.”", w:{Racism_Ethnocentrism:0.6} },
+    { t:"“La discriminación en Argentina hoy está exagerada.”", w:{Racism_Ethnocentrism:0.6} },
+    { t:"“Los pueblos originarios reciben privilegios injustificados.”", w:{Racism_Ethnocentrism:0.9, Xenophobia_AR:0.2} },
+    { t:"“La diversidad étnica debilita la cohesión social.”", w:{Racism_Ethnocentrism:0.8, Xenophobia_AR:0.3} },
+
+    // Autoritarismo excluyente (mide disposición a exclusión por identidad)
+    { t:"“Hay grupos que deberían ser vigilados más por su origen o religión.”", w:{Authoritarian_Exclusion:1.0, Islamophobia:0.6, Xenophobia_AR:0.4} },
+    { t:"“La libertad religiosa debería limitarse si ‘incomoda’ a la mayoría.”", w:{Authoritarian_Exclusion:0.9, Islamophobia:0.3} },
+    { t:"“Cuando una minoría ‘no se integra’, el Estado debería imponer integración por la fuerza.”", w:{Authoritarian_Exclusion:1.0, Racism_Ethnocentrism:0.4} },
+
+    // Ítems de “anticuerpo” (bajan sesgos si hay acuerdo)
+    { t:"“No es válido culpar a un colectivo por acciones de individuos.”", w:{AntiJew_Generalization:-0.7, Islamophobia:-0.7, Xenophobia_AR:-0.6, Racism_Ethnocentrism:-0.6} },
+    { t:"“Los derechos básicos no dependen de nacionalidad, religión u origen.”", w:{Xenophobia_AR:-0.8, Islamophobia:-0.6, AntiJew_Generalization:-0.6, Authoritarian_Exclusion:-0.8} }
+  ];
+
+  // UI
+  const testEl = document.getElementById("test");
+  const calcBtn = document.getElementById("calcBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const progressEl = document.getElementById("progress");
+
+  function render() {
+    testEl.innerHTML = `
+      <div class="mini">Escala: 1 Muy en desacuerdo · 2 En desacuerdo · 3 Neutral · 4 De acuerdo · 5 Muy de acuerdo</div>
+      ${QUESTIONS.map((q, i) => `
+        <div class="q">
+          <div class="t">${i+1}. ${q.t}</div>
+          <div class="scale">
+            ${[1,2,3,4,5].map(v => `
+              <label class="pill">
+                <input type="radio" name="q${i}" value="${v}">
+                <span>${v}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      `).join("")}
+    `;
+    testEl.querySelectorAll('input[type="radio"]').forEach(r => r.addEventListener("change", updateProgress));
+    updateProgress();
+  }
+
+  function getAnswers() {
+    const answers = [];
+    for (let i=0; i<QUESTIONS.length; i++){
+      const checked = document.querySelector(`input[name="q${i}"]:checked`);
+      answers.push(checked ? Number(checked.value) : null);
+    }
+    return answers;
+  }
+
+  function updateProgress() {
+    const a = getAnswers();
+    const done = a.filter(x => x !== null).length;
+    progressEl.textContent = `Respondidas: ${done}/${QUESTIONS.length}`;
+    calcBtn.disabled = done !== QUESTIONS.length;
+  }
+
+  function score() {
+    const ans = getAnswers();
+    const raw = Object.fromEntries(DIM_KEYS.map(k => [k, 0]));
+    const maxAbs = Object.fromEntries(DIM_KEYS.map(k => [k, 0]));
+
+    QUESTIONS.forEach((q, i) => {
+      const v = ans[i];
+      const centered = (v - 3) / 2; // -1..+1
+      for (const [k, w] of Object.entries(q.w)) {
+        raw[k] += centered * w;
+        maxAbs[k] += Math.abs(w);
+      }
+    });
+
+    // normalize to 0..100
+    const dim = {};
+    DIM_KEYS.forEach(k => {
+      const norm = maxAbs[k] ? (raw[k] / maxAbs[k]) : 0; // -1..+1
+      dim[k] = Math.round(norm * 50 + 50);
+    });
+
+    // overall: promedio ponderado (más peso a conspiración + exclusión)
+    const overall = Math.round(
+      dim.AntiJew_Conspiracy*0.18 +
+      dim.AntiJew_Generalization*0.16 +
+      dim.AntiIsrael_Hostility*0.12 +
+      dim.Islamophobia*0.16 +
+      dim.Xenophobia_AR*0.16 +
+      dim.Racism_Ethnocentrism*0.14 +
+      dim.Authoritarian_Exclusion*0.08
+    );
+
+    return { dim, overall };
+  }
+
+  function level(x){
+    if (x >= 75) return {txt:"Alto", cls:"danger"};
+    if (x >= 60) return {txt:"Medio-alto", cls:"notice"};
+    if (x >= 45) return {txt:"Medio", cls:"notice"};
+    return {txt:"Bajo", cls:""};
+  }
+
+  function showResult() {
+    const r = score();
+    document.getElementById("result").style.display = "block";
+    document.getElementById("overall").textContent = `${r.overall}/100`;
+
+    // summary tag
+    const lvl = level(r.overall);
+    const tag = lvl.txt === "Alto" ? "⚠️ Riesgo alto de sesgos" :
+                lvl.txt === "Medio-alto" ? "⚠️ Riesgo medio-alto" :
+                lvl.txt === "Medio" ? "Riesgo medio" : "Riesgo bajo";
+    document.getElementById("summaryTag").textContent = tag;
+
+    const meta = [
+      {
+        key:"AntiJew_Conspiracy",
+        title:"Antisemitismo conspirativo",
+        desc:"Indicadores de “poder oculto”, control de medios/finanzas, presión de organizaciones. Es una zona especialmente sensible."
+      },
+      {
+        key:"AntiJew_Generalization",
+        title:"Antisemitismo por generalización",
+        desc:"Confundir judíos con políticas del Estado de Israel, o atribuir rasgos colectivos (culpa colectiva/esencialismo)."
+      },
+      {
+        key:"AntiIsrael_Hostility",
+        title:"Hostilidad anti-Israel (deslegitimante)",
+        desc:"Mide deslegitimación del Estado de Israel. Puede ser crítica política intensa, pero si se mezcla con culpa colectiva se vuelve prejuicio."
+      },
+      {
+        key:"Islamophobia",
+        title:"Islamofobia (generalización)",
+        desc:"Asociar islam/musulmanes con violencia o incompatibilidad cultural de forma amplia y automática."
+      },
+      {
+        key:"Xenophobia_AR",
+        title:"Xenofobia (Argentina/Región)",
+        desc:"Rechazo a inmigración (en especial limítrofe), idea de “merecen menos derechos”, o atribución causal al delito."
+      },
+      {
+        key:"Racism_Ethnocentrism",
+        title:"Racismo / etnocentrismo",
+        desc:"Jerarquías culturales/étnicas, minimización de discriminación, rechazo a diversidad o a reclamos de pueblos originarios."
+      },
+      {
+        key:"Authoritarian_Exclusion",
+        title:"Exclusión autoritaria",
+        desc:"Disposición a limitar libertades/igualdad por origen o religión (vigilancia especial, integración forzada)."
+      }
+    ];
+
+    const metricsEl = document.getElementById("metrics");
+    metricsEl.innerHTML = meta.map(m => {
+      const val = r.dim[m.key];
+      const l = level(val);
+      return `
+        <div class="metric">
+          <div class="row" style="justify-content:space-between;">
+            <div class="name">${m.title}</div>
+            <span class="tag">${val}/100 · ${l.txt}</span>
+          </div>
+          <div class="bar"><div style="width:${val}%"></div></div>
+          <div class="desc">${m.desc}</div>
+        </div>
+      `;
+    }).join("");
+
+    // Alerts (solo si hay umbrales críticos)
+    const alerts = [];
+    const AJc = r.dim.AntiJew_Conspiracy;
+    const AJg = r.dim.AntiJew_Generalization;
+    const Isl = r.dim.Islamophobia;
+    const Xen = r.dim.Xenophobia_AR;
+    const Rac = r.dim.Racism_Ethnocentrism;
+
+    if (AJc >= 75 || AJg >= 75) {
+      alerts.push(`
+        <div class="danger">
+          <b>⚠️ Señal fuerte en prejuicio antijudío</b><br>
+          Tus respuestas muestran patrones típicos de <b>conspiración</b> o <b>culpa colectiva</b>.
+          Si querés debatir en serio, el punto clave es separar <i>crítica a políticas</i> de <i>atribución a un colectivo</i>.
+        </div>
+      `);
+    }
+    if (Isl >= 75) {
+      alerts.push(`
+        <div class="danger">
+          <b>⚠️ Señal fuerte de generalización hacia musulmanes</b><br>
+          Ojo con el salto “un grupo = una conducta”. Eso suele producir errores de diagnóstico y escalada social.
+        </div>
+      `);
+    }
+    if (Xen >= 75 || Rac >= 75) {
+      alerts.push(`
+        <div class="danger">
+          <b>⚠️ Señal fuerte de exclusión/jerarquización</b><br>
+          Recomendación: revisá qué afirmaciones te hicieron acordar fuerte con “merecen menos” o “cultura superior”.
+        </div>
+      `);
+    }
+    document.getElementById("alerts").innerHTML = alerts.join("") || `
+      <div class="notice">
+        <b>Lectura:</b> tu perfil no dispara alertas máximas. Si querés más debate, mirá en qué dimensiones quedaste “medio” y discutí esas.
+      </div>
+    `;
+
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }
+
+  function resetAll() {
+    document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+    document.getElementById("result").style.display = "none";
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  calcBtn.addEventListener("click", showResult);
+  resetBtn.addEventListener("click", resetAll);
+
+  render();
+</script>
+</body>
+</html>
