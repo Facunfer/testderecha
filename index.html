@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Tests ideológicos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    :root {
+      --bg:#0b0f17;
+      --card:#121a27;
+      --txt:#e7eefc;
+      --muted:#a9b7d0;
+      --accent:#6ea8ff;
+      --line:#24324a;
+    }
+
+    body {
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:var(--bg);
+      color:var(--txt);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+
+    .wrap {
+      max-width: 720px;
+      width:100%;
+      padding: 32px 20px;
+      text-align:center;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 30px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media (min-width: 640px) {
+      .cards { grid-template-columns: 1fr 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: left;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    .card h2 {
+      font-size: 20px;
+      margin: 0 0 8px;
+    }
+
+    .card p {
+      font-size: 14px;
+      margin: 0 0 18px;
+    }
+
+    .btn {
+      display:inline-block;
+      text-align:center;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      background: var(--accent);
+      color: #07101f;
+      text-decoration: none;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Tests ideológicos</h1>
+    <p>
+      Herramientas para generar debate, reflexión y comparación de ideas.
+      No son diagnósticos clínicos ni etiquetas definitivas.
+    </p>
+
+    <div class="cards">
+      <div class="card">
+        <div>
+          <h2>Test ideológico – Derecha</h2>
+          <p>
+            Mide posicionamiento ideológico dentro de la derecha:
+            liberal, conservadora, nacionalista, autoritaria y afinidad fascista.
+          </p>
+        </div>
+        <a class="btn" href="derecha.html">Ir al test</a>
+      </div>
+
+      <div class="card">
+        <div>
+          <h2>Test de sesgos y prejuicios</h2>
+          <p>
+            Evalúa indicadores de antisemitismo, islamofobia, xenofobia,
+            racismo y exclusión autoritaria, con enfoque argentino.
+          </p>
+        </div>
+        <a class="btn" href="xeono.html">Ir al test</a>
+      </div>
+    </div>
+
+    <footer>
+      © Test ideológico — uso educativo y de debate.
+    </footer>
+  </div>
+</body>
+</html>
